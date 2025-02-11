@@ -79,30 +79,30 @@ def main():
     ) as progress:
 
 # -------------------------------------------------------------
-        #### UNCOMMENT SECTION FOR ACTUAL TRAINING ####
 
         # Training phase
-        # console.print("\n[bold blue]Phase 1: Model Training[/bold blue]")
-        # trainer = ModelTrainer(Config.INPUT_DIR)
+        console.print("\n[bold blue]Phase 1: Model Training[/bold blue]")
+        trainer = ModelTrainer(Config.INPUT_DIR)
+
+        try:
+            model, tokenizer = trainer.train_model(progress)
+            console.print("[bold green]✓ Model training completed successfully![/bold green]")
+
+            # Load trained model
+
+            
+            if not analyzer or not analyzer.is_ready():
+                console.print("[bold red]❌ Analyzer not initialized![/bold red]")
+                return
+
+        except Exception as e:
+            console.print(f"[bold red]Training Error: {e}[/bold red]")
+            console.print_exception(show_locals=True)
+            return
         
-        # try:
-        #     model, tokenizer = trainer.train_model(progress)
-        #     console.print("[bold green]✓ Model training completed successfully![/bold green]")
-# 
-        #     # Load trained model
-        
-        #     
-        #     if not analyzer or not analyzer.is_ready():
-        #         console.print("[bold red]❌ Analyzer not initialized![/bold red]")
-        #         return
-# 
-        # except Exception as e:
-        #     console.print(f"[bold red]Training Error: {e}[/bold red]")
-        #     console.print_exception(show_locals=True)
-        #     return
-        
-        #### UNCOMMENT SECTION FOR ACTUAL TRAINING ####
+
 # -------------------------------------------------------------
+        
         # Analysis phase
         analyzer = load_trained_model(Config.CODING_KEYWORDS)
 
@@ -139,12 +139,16 @@ def main():
                 console.print_exception(show_locals=True)
             
             progress.update(analysis_task, advance=1)
-        
+
+# -------------------------------------------------------------
+
         # Final summary
         total_reports = len(pdf_files)
         console.print(f"\n[bold blue]Analysis Complete![/bold blue]")
         console.print(f"Processed {total_reports} reports")
         console.print(f"Results saved in: {Config.OUTPUT_DIR}")
+
+# -------------------------------------------------------------
 
 if __name__ == "__main__":
     try:
