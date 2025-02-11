@@ -47,6 +47,10 @@ To train the model:
 2. Ensure your PDF reports are prepared in the `data/` directory.
 3. Run the command: `python main.py`.
 
+### Cause Analysis with MISTRAL
+The system utilizes MISTRAL for cause analysis. The `determine_cause` method in the `TextAnalyzer` class constructs a prompt that includes categorized evidence and the primary problem. MISTRAL then generates a professional analysis based on this prompt, providing insights into the cause chain and recommended preventive measures.
+
+
 ## Key Components
 - **text_extractor.py**: Handles PDF text extraction.
 - **text_analyzer.py**: Performs multi-task text analysis.
