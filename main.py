@@ -89,8 +89,6 @@ def main():
             console.print("[bold green]✓ Model training completed successfully![/bold green]")
 
             # Load trained model
-
-            
             if not analyzer or not analyzer.is_ready():
                 console.print("[bold red]❌ Analyzer not initialized![/bold red]")
                 return
