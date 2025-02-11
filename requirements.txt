@@ -1,0 +1,9 @@
+torch>=1.9.0
+transformers>=4.15.0
+rich>=10.0.0
+PyPDF2>=2.0.0
+numpy>=1.19.5
+scikit-learn>=0.24.2
+regex>=2021.4.4
+pathlib>=1.0.1
+accelerate>=0.26.0
