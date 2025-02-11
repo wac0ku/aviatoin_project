@@ -77,12 +77,20 @@ To configure the system, modify `src/config.py` as follows:
   ```
 
 ## Usage
-To run the analysis, execute the following command:
+To run the analysis, execute the following command or alternatively run the PowerShell script or the Bash script:
 ```bash
 python main.py
 ```
+or
+```powershell
+.\start.ps1
+```
+or
+```bash
+./start.sh
+```
 ### Example Input
-Place your PDF reports in the `data/` directory. The system will process these files and generate analysis reports.
+Place your PDF reports in the `data/` directory. The system will process these files and generate analysis reports. You can start the application using either the PowerShell script or the Bash script as described above.
 
 ## Model Training
 To train the model:

@@ -48,7 +48,10 @@ To train the model:
 3. Run the command: `python main.py`.
 
 ### Cause Analysis with MISTRAL
-The system utilizes MISTRAL for cause analysis. The `determine_cause` method in the `TextAnalyzer` class constructs a prompt that includes categorized evidence and the primary problem. MISTRAL then generates a professional analysis based on this prompt, providing insights into the cause chain and recommended preventive measures.
+The system utilizes MISTRAL for cause analysis. The `determine_cause` method in the `TextAnalyzer` class constructs a prompt that includes categorized evidence and the primary problem. MISTRAL then generates a professional analysis based on this prompt, providing insights into the cause chain and recommended preventive measures. 
+
+Additionally, users can start the application using either the PowerShell script (`start.ps1`) or the Bash script (`start.sh`) to execute the analysis.
+
 
 
 ## Key Components
