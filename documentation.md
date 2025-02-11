@@ -8,8 +8,8 @@ To install the Flight Accident Analysis System, follow these steps:
 
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/yourusername/flight-accident-analysis.git
-   cd flight-accident-analysis
+   git clone https://github.com/wac0ku/aviatoin_project.git
+   cd aviation_project
    ```
 
 2. **Set Up a Virtual Environment**:

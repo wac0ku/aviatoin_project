@@ -35,8 +35,8 @@ The Flight Accident Analysis System is a machine learning-powered tool designed 
 ## Installation
 To install the Flight Accident Analysis System, follow these steps:
 ```bash
-git clone https://github.com/wac0ku/flight-accident-analysis.git
-cd flight-accident-analysis
+git clone https://github.com/wac0ku/aviatoin_project.git
+cd aviatoin_project
 python -m venv .venv
 source .venv/bin/activate  # On Windows use `.venv\Scripts\activate`
 pip install -r requirements.txt
