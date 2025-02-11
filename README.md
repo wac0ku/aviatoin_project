@@ -2,7 +2,7 @@
 
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
-![Version](https://img.shields.io/badge/version-1.0.0-orange)
+![Version](https://img.shields.io/badge/version-1.0.3-orange)
 
 ## Overview
 The Flight Accident Analysis System is a machine learning-powered tool designed to automate the analysis of flight accident reports. Utilizing BERT multi-task classification, this system aims to enhance aviation safety by providing insights into accident factors and causes.
