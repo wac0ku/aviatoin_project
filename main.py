@@ -24,6 +24,16 @@ progress_columns = [
 MODLE_DIR = "models/accident-classifier"
 
 def load_trained_model(config_keywords):
+    """
+    Lädt das vortrainierte Modell und den Tokenizer.
+
+    Parameter:
+        config_keywords (dict): Ein Dictionary mit Schlüsselwörtern für die Kodierung.
+
+    Rückgabe:
+        TextAnalyzer: Ein Analyzer-Objekt mit dem geladenen Modell und Tokenizer oder None im Fehlerfall.
+    """
+
     try:
         console.print("[bold yellow]Loading trained model...[/bold yellow]")
         
@@ -63,6 +73,10 @@ def load_trained_model(config_keywords):
         return None
 
 def main():
+    """
+    Hauptfunktion des Programms, die das Modell trainiert und die Analyse durchführt.
+    """
+
     # Create necessary directories
     Config.OUTPUT_DIR.mkdir(exist_ok=True)
     Path("models").mkdir(exist_ok=True)

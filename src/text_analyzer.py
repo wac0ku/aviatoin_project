@@ -16,6 +16,18 @@ login(token=HF_TOKEN)
 console = Console()
 
 class TextAnalyzer:
+    """
+    Eine Klasse zur Analyse von Texten mit einem vortrainierten Modell.
+
+    Attribute:
+        coding_keywords (dict): Ein Dictionary mit Schlüsselwörtern für die Kodierung.
+        model: Das vortrainierte Modell für die Textanalyse.
+        tokenizer: Der Tokenizer für die Textverarbeitung.
+        categories (list): Eine Liste der Kategorien für die Klassifikation.
+        device (torch.device): Das Gerät, auf dem das Modell trainiert wird (CPU oder GPU).
+        _model_loaded (bool): Statusflag, ob das Modell geladen ist.
+    """
+
     def __init__(self, coding_keywords):
         self.coding_keywords = coding_keywords
         self.model = None
@@ -25,7 +37,13 @@ class TextAnalyzer:
         self._model_loaded = False # Neuer Status-Flag
     
     def is_ready(self):
-        """Überprüft ob Analyse möglich ist"""
+        """
+        Überprüft, ob das Modell und der Tokenizer bereit sind für die Analyse.
+
+        Rückgabe:
+            bool: True, wenn das Modell und der Tokenizer bereit sind, andernfalls False.
+        """
+
         return self._model_loaded and self.model is not None and self.tokenizer is not None
 
     def __del__(self):
@@ -33,7 +51,10 @@ class TextAnalyzer:
         self.cleanup()
 
     def cleanup(self):
-        """Explicit cleanup of resources"""
+        """
+        Führt eine explizite Bereinigung der Ressourcen durch.
+        """
+
         if self.model:
             self.model.cpu()
             del self.model
@@ -45,7 +66,17 @@ class TextAnalyzer:
         gc.collect()
 
     def set_model_and_tokenizer(self, model, tokenizer):
-        """Robust model and tokenizer setting"""
+        """
+        Setzt das Modell und den Tokenizer für die Textanalyse.
+
+        Parameter:
+            model: Das vortrainierte Modell.
+            tokenizer: Der Tokenizer für die Textverarbeitung.
+
+        Rückgabe:
+            None
+        """
+
         try:
             # Validate inputs
             if model is None or tokenizer is None:
@@ -80,7 +111,16 @@ class TextAnalyzer:
             raise
 
     def analyze_text(self, text):
-        """Performs text analysis with memory management"""
+        """
+        Führt die Textanalyse durch und verwaltet den Speicher.
+
+        Parameter:
+            text (str): Der zu analysierende Text.
+
+        Rückgabe:
+            dict: Ein Dictionary mit den Analyseergebnissen, einschließlich Kodierungen, primärem Problem, Ursache und Fehlerkette.
+        """
+
         if not self.is_ready():
             raise ValueError("Model and tokenizer must be set before analysis.")
 
@@ -118,7 +158,17 @@ class TextAnalyzer:
             torch.cuda.empty_cache()
     
     def determine_cause(self, primary_problem, coding_results):
-        """Nutze Mistral für die Ursachenanalyse"""
+        """
+        Analysiert die Ursache des Problems mithilfe des Mistral-Modells.
+
+        Parameter:
+            primary_problem (dict): Das primäre Problem mit Kategorie und Beweisen.
+            coding_results (dict): Die Ergebnisse der Kodierung.
+
+        Rückgabe:
+            str: Die generierte Analyse der Ursache.
+        """
+
         try:
             # Initialisiere die Pipeline einmalig (nicht bei jedem Aufruf)
             if not hasattr(self, 'mistral_pipe'):
@@ -166,7 +216,17 @@ class TextAnalyzer:
             console.print(f"[red]Analysefehler: {e}[/red]")
 
     def generate_failure_chain(self, primary_problem, coding_results):
-        """Generiert eine visuell strukturierte Fehlerkette"""
+        """
+        Generiert eine visuell strukturierte Fehlerkette basierend auf dem primären Problem und den Kodierungsergebnissen.
+
+        Parameter:
+            primary_problem (dict): Das primäre Problem mit Kategorie und Beweisen.
+            coding_results (dict): Die Ergebnisse der Kodierung.
+
+        Rückgabe:
+            str: Eine formatierte Fehlerkette als String.
+        """
+
         chain = [
             f"🔥 [bold]Primäres Problem[/bold]: {primary_problem['category']}",
             f"   - Confidence: {primary_problem['confidence']*100:.1f}%",
@@ -183,7 +243,18 @@ class TextAnalyzer:
         return "\n".join(chain)
 
     def _process_predictions(self, text, category_probs, problem_probs):
-        """Process model predictions (all inputs should be on CPU)"""
+        """
+        Verarbeitet die Vorhersagen des Modells.
+
+        Parameter:
+            text (str): Der analysierte Text.
+            category_probs (torch.Tensor): Die Wahrscheinlichkeiten für die Kategorien.
+            problem_probs (torch.Tensor): Die Wahrscheinlichkeiten für das primäre Problem.
+
+        Rückgabe:
+            dict: Ein Dictionary mit den Kodierungsergebnissen und dem primären Problem.
+        """
+
         coding_results = {}
 
         # Process categories
@@ -214,4 +285,3 @@ class TextAnalyzer:
             "cause": self.determine_cause(primary_problem, coding_results),
             "failure_chain": self.generate_failure_chain(primary_problem, coding_results)
         }
-    

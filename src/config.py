@@ -1,7 +1,20 @@
+"""
+Dieses Modul enthält die Konfigurationseinstellungen für das Projekt, einschließlich 
+Eingangs- und Ausgangsverzeichnissen sowie Schlüsselwörtern für die Kodierung.
+"""
+
 from pathlib import Path
 
 class Config():
-    # Konfiguration
+    """
+    Eine Klasse zur Speicherung von Konfigurationseinstellungen für das Projekt.
+
+    Attribute:
+        INPUT_DIR (Path): Das Verzeichnis, in dem die Eingabedaten gespeichert sind.
+        OUTPUT_DIR (Path): Das Verzeichnis, in dem die Ausgabedaten gespeichert werden.
+        CODING_KEYWORDS (dict): Ein Dictionary mit Schlüsselwörtern für verschiedene Kategorien.
+    """
+    
     INPUT_DIR = Path("data/")
     OUTPUT_DIR = Path("reports/")
     CODING_KEYWORDS = {

@@ -1,3 +1,8 @@
+"""
+Dieses Modul enthält Klassen und Funktionen für das Training eines BERT-Modells zur 
+Multi-Task-Klassifikation von Unfallberichten.
+"""
+
 import re
 import numpy as np
 import gc
@@ -19,16 +24,46 @@ from transformers import (
 from src.config import Config
 
 class AccidentReportDataset(Dataset):
+    """
+    Eine benutzerdefinierte Dataset-Klasse für das Laden von Unfallberichttexten und deren 
+    entsprechenden Labels.
+
+    Attribute:
+        texts (list): Eine Liste von Texten der Unfallberichte.
+        labels (list): Eine Liste von Labels, die den Texten entsprechen.
+        tokenizer (BertTokenizer): Der Tokenizer für die Textverarbeitung.
+        max_length (int): Die maximale Länge der Tokenisierung.
+    """
+
     def __init__(self, texts, labels, tokenizer, max_length=512):
+        """
+        Initialisiert das Dataset mit Texten, Labels und Tokenizer.
+
+        Parameter:
+            texts (list): Die Texte der Unfallberichte.
+            labels (list): Die zugehörigen Labels.
+            tokenizer (BertTokenizer): Der Tokenizer für die Textverarbeitung.
+            max_length (int): Die maximale Länge der Tokenisierung (Standard: 512).
+        """
         self.texts = texts
         self.labels = labels
         self.tokenizer = tokenizer
         self.max_length = max_length
 
     def __len__(self):
+        """Gibt die Anzahl der Texte im Dataset zurück."""
         return len(self.texts)
 
     def __getitem__(self, idx):
+        """
+        Gibt ein einzelnes Element des Datasets zurück.
+
+        Parameter:
+            idx (int): Der Index des gewünschten Elements.
+
+        Rückgabe:
+            dict: Ein Dictionary mit 'input_ids', 'attention_mask' und 'labels'.
+        """
         text = str(self.texts[idx])
         inputs = self.tokenizer(
             text,
@@ -39,7 +74,7 @@ class AccidentReportDataset(Dataset):
         )
 
         if len(self.texts) == 0 or len(self.labels) == 0:
-            raise ValueError("Error: No texts or labels available to create dataset!")
+            raise ValueError("Fehler: Keine Texte oder Labels verfügbar, um das Dataset zu erstellen!")
         
         return {
             'input_ids': inputs['input_ids'].squeeze(),
@@ -51,7 +86,24 @@ class AccidentReportDataset(Dataset):
         }
 
 class ModelTrainer:
+    """
+    Eine Klasse, die für das Training des BERT-Modells verantwortlich ist.
+
+    Attribute:
+        input_dir (Path): Das Verzeichnis, in dem die Eingabedaten gespeichert sind.
+        device (torch.device): Das Gerät, auf dem das Modell trainiert wird (CPU oder GPU).
+        model (BertForMultiTaskClassification): Das BERT-Modell.
+        tokenizer (BertTokenizer): Der Tokenizer für die Textverarbeitung.
+        categories (list): Eine Liste der Kategorien für die Klassifikation.
+    """
+
     def __init__(self, input_dir: Path):
+        """
+        Initialisiert den ModelTrainer mit dem Eingabeverzeichnis.
+
+        Parameter:
+            input_dir (Path): Das Verzeichnis, in dem die Eingabedaten gespeichert sind.
+        """
         self.input_dir = input_dir
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = None
@@ -59,12 +111,11 @@ class ModelTrainer:
         self.categories = list(Config.CODING_KEYWORDS.keys())
 
     def __del__(self):
-        """Cleanup resources on deletion"""
+        """Räumt Ressourcen beim Löschen auf."""
         self.cleanup()
 
     def cleanup(self):
-        """Explicit cleanup of resources"""
-
+        """Explizite Bereinigung von Ressourcen."""
         if hasattr(self, 'model') and self.model:
             self.model.cpu()
             del self.model
@@ -77,23 +128,31 @@ class ModelTrainer:
         gc.collect()
     
     def train_model(self, progress=None):
-        """Train the BERT model with memory management"""
+        """
+        Trainiert das BERT-Modell mit Speicherverwaltung.
+
+        Parameter:
+            progress (Progress): Ein Fortschrittsobjekt zur Anzeige des Trainingsfortschritts.
+
+        Rückgabe:
+            tuple: Das trainierte Modell und der Tokenizer.
+        """
         try:
-            # Initialize model and tokenizer
-            self.cleanup()  # Ensure clean state
+            # Modell und Tokenizer initialisieren
+            self.cleanup()  # Sicherstellen, dass der Zustand sauber ist
             self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
             self.model = BertForMultiTaskClassification.from_pretrained(
                 'bert-base-uncased',
                 num_categories=len(self.categories)
             ).to(self.device)
 
-            # Prepare data
+            # Daten vorbereiten
             train_loader, val_loader = self._prepare_data_loaders()
 
             if not train_loader:
-                raise ValueError("No valid training data found!")
+                raise ValueError("Keine gültigen Trainingsdaten gefunden!")
 
-            # Training setup
+            # Trainingssetup
             optimizer = AdamW(self.model.parameters(), lr=1e-5)
             scheduler = get_linear_schedule_with_warmup(
                 optimizer,
@@ -104,15 +163,15 @@ class ModelTrainer:
             best_val_loss = float('inf')
             best_model_state = None
 
-            # Training loop
+            # Trainingsschleife
             for epoch in range(5):
-                # Train
+                # Trainieren
                 self._train_epoch(train_loader, optimizer, scheduler, progress)
 
-                # Validate
+                # Validieren
                 val_loss = self._validate(val_loader)
 
-                # Save best model
+                # Bestes Modell speichern
                 if val_loss < best_val_loss:
                     best_val_loss = val_loss
                     best_model_state = {
@@ -120,23 +179,23 @@ class ModelTrainer:
                         'val_loss': val_loss
                     }
 
-                # Clear memory after each epoch
+                # Speicher nach jeder Epoche leeren
                 torch.cuda.empty_cache()
                 gc.collect()
 
-            # Define output directory
+            # Ausgabeverzeichnis definieren
             output_dir = Path('models/accident-classifier')
             output_dir.mkdir(parents=True, exist_ok=True)
 
-            # Save best model state and tokenizer
+            # Besten Modellzustand und Tokenizer speichern
             if best_model_state:
-                # Save model state
+                # Modellzustand speichern
                 torch.save(best_model_state, output_dir / 'pytorch_model.bin')
 
-                # Save model config
+                # Modellkonfiguration speichern
                 self.model.config.save_pretrained(output_dir)
 
-                # Save tokenizer
+                # Tokenizer speichern
                 self.tokenizer.save_pretrained(output_dir)
 
             return self.model, self.tokenizer
@@ -150,7 +209,15 @@ class ModelTrainer:
             gc.collect()
             
     def _train_epoch(self, train_loader, optimizer, scheduler, progress=None):
-        """Train one epoch with memory management"""
+        """
+        Trainiert eine Epoche mit Speicherverwaltung.
+
+        Parameter:
+            train_loader (DataLoader): Der DataLoader für das Training.
+            optimizer (AdamW): Der Optimierer für das Training.
+            scheduler (Scheduler): Der Scheduler für die Lernrate.
+            progress (Progress): Ein Fortschrittsobjekt zur Anzeige des Trainingsfortschritts.
+        """
         self.model.train()
             
         epoch_task_id = progress.add_task(
@@ -159,27 +226,27 @@ class ModelTrainer:
         )
         
         for batch_idx, batch in enumerate(train_loader, 1):
-            # Move batch to GPU
+            # Batch auf GPU verschieben
             batch = {k: v.to(self.device) if torch.is_tensor(v) else v 
                     for k, v in batch.items()}
             
-            # Update progress
+            # Fortschritt aktualisieren
             progress.update(epoch_task_id, advance=1)
             
-            # Forward pass
+            # Vorwärtsdurchlauf
             optimizer.zero_grad()
             outputs = self.model(**batch)
-            loss = outputs.loss  # Access the loss
+            loss = outputs.loss  # Verlust abrufen
             
-            # Backward pass
+            # Rückwärtsdurchlauf
             loss.backward()
             optimizer.step()
             scheduler.step()
             
-            # Update Progress
+            # Fortschritt aktualisieren
             progress.update(epoch_task_id, advance=1)
             
-            # Clear memory
+            # Speicher leeren
             del outputs, loss
             batch = {k: v.cpu() if torch.is_tensor(v) else v 
                     for k, v in batch.items()}
@@ -187,22 +254,29 @@ class ModelTrainer:
         progress.remove_task(epoch_task_id)
         torch.cuda.empty_cache()
 
-
     def _validate(self, val_loader):
-        """Validate model with memory management"""
+        """
+        Validiert das Modell mit Speicherverwaltung.
+
+        Parameter:
+            val_loader (DataLoader): Der DataLoader für die Validierung.
+
+        Rückgabe:
+            float: Der durchschnittliche Validierungsverlust.
+        """
         self.model.eval()
         total_loss = 0
         
         with torch.no_grad():
             for batch in val_loader:
-                # Move batch to GPU
+                # Batch auf GPU verschieben
                 batch = {k: v.to(self.device) if torch.is_tensor(v) else v 
                         for k, v in batch.items()}
                 
                 outputs = self.model(**batch)
-                total_loss += outputs.loss.item()  # Access the loss
+                total_loss += outputs.loss.item()  # Verlust abrufen
                 
-                # Clear memory
+                # Speicher leeren
                 del outputs
                 batch = {k: v.cpu() if torch.is_tensor(v) else v 
                         for k, v in batch.items()}
@@ -211,21 +285,26 @@ class ModelTrainer:
         return total_loss / len(val_loader)
 
     def _prepare_data_loaders(self):
-        """Prepare data loaders for training and validation"""
+        """
+        Bereitet die DataLoader für Training und Validierung vor.
+
+        Rückgabe:
+            tuple: Ein Tuple mit dem Trainings- und Validierungs-DataLoader.
+        """
         texts = []
         labels = []
         categories_order = list(Config.CODING_KEYWORDS.keys())  # WICHTIG: Reihenfolge festlegen
 
         if not categories_order:
-            raise ValueError("Config.CODING_KEYWORDS is empty or not properly defined")
+            raise ValueError("Config.CODING_KEYWORDS ist leer oder nicht richtig definiert")
 
         # Überprüfe Input-Verzeichnis
         if not self.input_dir.exists():
-            raise FileNotFoundError(f"Input directory {self.input_dir} does not exist")
+            raise FileNotFoundError(f"Eingabeverzeichnis {self.input_dir} existiert nicht")
 
         pdf_files = list(self.input_dir.glob("*.pdf"))
         if not pdf_files:
-            raise ValueError(f"No PDF files found in {self.input_dir}")
+            raise ValueError(f"Keine PDF-Dateien im {self.input_dir} gefunden")
 
         for pdf_file in pdf_files:
             try:
@@ -247,7 +326,7 @@ class ModelTrainer:
                         )
                     
                     if not keyword_counts:
-                        print(f"Warning: No keywords found in {pdf_file}")
+                        print(f"Warnung: Keine Schlüsselwörter in {pdf_file} gefunden")
                         keyword_counts = [0] * len(categories_order) # Setze leere Kategorien auf Null
                     
                     label = {
@@ -259,12 +338,12 @@ class ModelTrainer:
                     labels.append(label)
 
             except Exception as e:
-                print(f"Error processing {pdf_file}: {e}")
+                print(f"Fehler beim Verarbeiten von {pdf_file}: {e}")
                 continue
 
         # Überprüfe auf gültige Daten
         if len(texts) == 0:
-            raise ValueError("No valid training data after processing PDFs")
+            raise ValueError("Keine gültigen Trainingsdaten nach der Verarbeitung der PDFs")
 
         # Dataset-Split mit random_split
         full_dataset = AccidentReportDataset(texts, labels, self.tokenizer)
@@ -272,17 +351,17 @@ class ModelTrainer:
         val_size = len(full_dataset) - train_size
 
         if len(full_dataset) < 2:
-            raise ValueError("Dataset too small for splitting")
+            raise ValueError("Dataset zu klein für den Split")
 
         # Sicherstellen, dass die Größen > 0
         if train_size == 0 or val_size == 0:
             raise ValueError(
-                f"Dataset too small for split. Total samples: {len(full_dataset)}"
+                f"Dataset zu klein für den Split. Gesamtproben: {len(full_dataset)}"
             )
         
 
         if len(full_dataset) == 0:
-            raise ValueError("Dataset is empty")
+            raise ValueError("Dataset ist leer")
 
         train_dataset, val_dataset = random_split(
             full_dataset, 
@@ -296,8 +375,16 @@ class ModelTrainer:
         )
 
 class BertForMultiTaskClassification(BertForSequenceClassification):
-    """Custom BERT model for multi-task classification"""
+    """Benutzerdefiniertes BERT-Modell für die Multi-Task-Klassifikation."""
+    
     def __init__(self, config, num_categories):
+        """
+        Initialisiert das benutzerdefinierte BERT-Modell.
+
+        Parameter:
+            config: Die Konfiguration des BERT-Modells.
+            num_categories (int): Die Anzahl der Kategorien für die Klassifikation.
+        """
         super().__init__(config)
         self.num_categories = num_categories
         
@@ -313,6 +400,24 @@ class BertForMultiTaskClassification(BertForSequenceClassification):
                 position_ids=None, head_mask=None, inputs_embeds=None, 
                 labels=None, output_attentions=None, output_hidden_states=None,
                 return_dict=None):
+        """
+        Führt den Vorwärtsdurchlauf des Modells aus.
+
+        Parameter:
+            input_ids (torch.Tensor): Die Eingabe-IDs.
+            attention_mask (torch.Tensor): Die Aufmerksamkeitsmaske.
+            token_type_ids (torch.Tensor): Die Token-Typ-IDs.
+            position_ids (torch.Tensor): Die Positions-IDs.
+            head_mask (torch.Tensor): Die Kopfmaske.
+            inputs_embeds (torch.Tensor): Die Eingabe-Embeddings.
+            labels (dict): Die Labels für die Berechnung des Verlusts.
+            output_attentions (bool): Gibt an, ob die Aufmerksamkeiten zurückgegeben werden sollen.
+            output_hidden_states (bool): Gibt an, ob die versteckten Zustände zurückgegeben werden sollen.
+            return_dict (bool): Gibt an, ob die Ausgaben als Dictionary zurückgegeben werden sollen.
+
+        Rückgabe:
+            MultiTaskOutput: Die Ausgaben des Modells, einschließlich der Logits und des Verlusts.
+        """
         
         outputs = self.bert(
             input_ids=input_ids,
@@ -338,18 +443,18 @@ class BertForMultiTaskClassification(BertForSequenceClassification):
         if problem_logits.dim() == 1:
             problem_logits = problem_logits.unsqueeze(0) # Form [1, num_categories]
 
-        # Loss-Berechnung
+        # Verlust-Berechnung
         loss = None
         if labels is not None:
 
-            # Multi-Label Loss für Kategorien
+            # Multi-Label Verlust für Kategorien
             category_loss_fct = torch.nn.BCEWithLogitsLoss()
             category_loss = category_loss_fct(
                 category_logits, 
                 labels['categories']
             )
             
-            # Multi-Class Loss für primäres Problem
+            # Multi-Class Verlust für primäres Problem
             problem_loss_fct = torch.nn.CrossEntropyLoss()
             problem_loss = problem_loss_fct(
                 problem_logits,
@@ -365,8 +470,17 @@ class BertForMultiTaskClassification(BertForSequenceClassification):
         )
         
 class MultiTaskOutput:
-    """Container for multi-task model outputs"""
+    """Container für die Ausgaben des Multi-Task-Modells."""
+    
     def __init__(self, category_logits, problem_logits, loss=None):
+        """
+        Initialisiert den MultiTaskOutput-Container.
+
+        Parameter:
+            category_logits (torch.Tensor): Die Logits für die Kategorien.
+            problem_logits (torch.Tensor): Die Logits für das primäre Problem.
+            loss (torch.Tensor, optional): Der Verlust, falls vorhanden.
+        """
         self.category_logits = category_logits
         self.problem_logits = problem_logits
         self.loss = loss
